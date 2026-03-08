@@ -90,6 +90,69 @@ class MainActivity: FlutterActivity() {
             return "Failed to extract backend: ${e.message}"
         }
 
+        // Collect permission/debug info for the copied binary so we can diagnose execution issues
+        val permissionDebugBuilder = StringBuilder()
+        try {
+            // Ensure executable/readable for owner/group/other
+            try {
+                binaryFile.setExecutable(true, false)
+                binaryFile.setReadable(true, false)
+                permissionDebugBuilder.append("setExecutable/setReadable called\n")
+            } catch (e: Exception) {
+                permissionDebugBuilder.append("Failed to set file flags: ${e.message}\n")
+            }
+
+            // Explicit chmod 755 via Runtime.exec
+            try {
+                val chmodProc = Runtime.getRuntime().exec(arrayOf("chmod", "755", binaryFile.absolutePath))
+                val finished = chmodProc.waitFor(3, TimeUnit.SECONDS)
+                val stdout = chmodProc.inputStream.bufferedReader().use { it.readText() }
+                val stderr = chmodProc.errorStream.bufferedReader().use { it.readText() }
+                permissionDebugBuilder.append("chmod finished=${finished} exit=${if (finished) chmodProc.exitValue() else "timeout"}\n")
+                if (stdout.isNotBlank()) permissionDebugBuilder.append("chmod stdout:\n${stdout.takeLast(Math.min(stdout.length, 2000))}\n")
+                if (stderr.isNotBlank()) permissionDebugBuilder.append("chmod stderr:\n${stderr.takeLast(Math.min(stderr.length, 2000))}\n")
+            } catch (e: Exception) {
+                permissionDebugBuilder.append("chmod exec failed: ${e.message}\n")
+            }
+
+            // ls -l on the binary
+            try {
+                val lsProc = Runtime.getRuntime().exec(arrayOf("ls", "-l", binaryFile.absolutePath))
+                lsProc.waitFor(2, TimeUnit.SECONDS)
+                val lsOut = lsProc.inputStream.bufferedReader().use { it.readText().trim() }
+                permissionDebugBuilder.append("ls -l ${binaryFile.absolutePath}:\n${lsOut.takeLast(Math.min(lsOut.length, 2000))}\n")
+            } catch (e: Exception) {
+                permissionDebugBuilder.append("ls -l failed: ${e.message}\n")
+            }
+
+            // ls -Z on backendDir to show SELinux context (ignore if not available)
+            try {
+                val lsZ = Runtime.getRuntime().exec(arrayOf("ls", "-Z", backendDir.absolutePath))
+                lsZ.waitFor(2, TimeUnit.SECONDS)
+                val out = lsZ.inputStream.bufferedReader().use { it.readText().trim() }
+                permissionDebugBuilder.append("ls -Z ${backendDir.absolutePath}:\n${out.takeLast(Math.min(out.length, 2000))}\n")
+            } catch (e: Exception) {
+                permissionDebugBuilder.append("ls -Z not available or failed: ${e.message}\n")
+            }
+
+            // /system/bin/id to show uid/gid
+            try {
+                val idProc = Runtime.getRuntime().exec(arrayOf("/system/bin/id"))
+                idProc.waitFor(2, TimeUnit.SECONDS)
+                val idOut = idProc.inputStream.bufferedReader().use { it.readText().trim() }
+                permissionDebugBuilder.append("/system/bin/id:\n${idOut}\n")
+            } catch (e: Exception) {
+                permissionDebugBuilder.append("id failed: ${e.message}\n")
+            }
+        } catch (_: Exception) {
+            // keep going; best-effort diagnostics
+        }
+
+        val permissionDebug = permissionDebugBuilder.toString()
+        if (permissionDebug.isNotEmpty()) {
+            backendOutput.append(permissionDebug)
+        }
+
         if (!binaryFile.exists()) {
             return "Backend binary not found in assets"
         }
@@ -140,9 +203,13 @@ class MainActivity: FlutterActivity() {
 
                 if (started) {
                     return null // success
-                } else {
+                    } else {
                     // stop process if still running
                     try { backendProcess?.destroyForcibly() } catch (_: Exception) {}
+                    // re-append permission debug collected earlier so getBackendLog() will include it
+                    try {
+                        if (permissionDebug.isNotEmpty()) backendOutput.append(permissionDebug)
+                    } catch (_: Exception) {}
                     backendOutput.append("Backend did not start listening on $addr\n")
                 }
             } catch (e: Exception) {
