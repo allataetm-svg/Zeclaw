@@ -190,4 +190,21 @@ class MainActivity: FlutterActivity() {
             executor.shutdownNow()
         }
     }
+
+    private fun getBackendLog(): String {
+        val cacheDir = applicationContext.cacheDir
+        val logFile = File(cacheDir, "backend/zeclaw.log")
+        return try {
+            if (logFile.exists()) {
+                val content = logFile.readText()
+                if (content.isEmpty()) "(log empty)" else content
+            } else {
+                // fallback to captured output
+                val out = backendOutput.toString()
+                if (out.isEmpty()) "(no log file)" else out
+            }
+        } catch (e: Exception) {
+            "Failed to read log: ${e.message}"
+        }
+    }
 }
