@@ -62,8 +62,8 @@ class MainActivity: FlutterActivity() {
     private fun startBackend(): String? {
         val context = applicationContext
         val assets = context.resources.assets
-        val cacheDir = context.cacheDir
-        val backendDir = File(cacheDir, "backend")
+        val filesDir = context.filesDir
+        val backendDir = File(filesDir, "backend")
 
         if (!backendDir.exists()) {
             backendDir.mkdirs()
@@ -192,8 +192,8 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun getBackendLog(): String {
-        val cacheDir = applicationContext.cacheDir
-        val logFile = File(cacheDir, "backend/zeclaw.log")
+        val filesDir = applicationContext.filesDir
+        val logFile = File(filesDir, "backend/zeclaw.log")
         return try {
             if (logFile.exists()) {
                 val content = logFile.readText()
