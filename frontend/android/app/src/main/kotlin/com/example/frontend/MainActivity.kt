@@ -134,10 +134,6 @@ class MainActivity: FlutterActivity() {
                     prootFile.absolutePath,
                     "-0",
                     "-w", backendDir.absolutePath,
-                    "-b", "/proc",
-                    "-b", "/sys",
-                    "-b", "/dev",
-                    "-b", "/data/data/com.example.frontend/files:/data/data/com.example.frontend/files",
                     binaryFile.absolutePath,
                     "-addr", addr
                 )
