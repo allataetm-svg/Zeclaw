@@ -1,0 +1,49 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/backend/vendor/
+/backend/zeclaw-backend-*
+
+# Flutter
+/frontend/.dart_tool/
+/frontend/.flutter-plugins
+/frontend/.flutter-plugins-dependencies
+/frontend/.pub-cache/
+/frontend/.pub/
+/frontend/build/
+/frontend/android/
+/frontend/ios/
+/frontend/linux/
+/frontend/macos/
+/frontend/web/
+/frontend/windows/
+
+# Android
+*.jks
+*.keystore
+*.apk
+*.aab
+*.class
+*.dex
+local.properties
+/frontend/android/local.properties
+/frontend/android/app/google-services.json
+/frontend/android/.gradle/
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

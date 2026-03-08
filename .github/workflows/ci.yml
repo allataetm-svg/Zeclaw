@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'devin/**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Go Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Go vet
+        working-directory: backend
+        run: go vet ./...
+      - name: Go test
+        working-directory: backend
+        run: go test ./...
+      - name: Build check
+        working-directory: backend
+        run: CGO_ENABLED=0 go build -o /tmp/zeclaw ./cmd/zeclaw/
+
+  frontend:
+    name: Flutter Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+      - name: Flutter pub get
+        working-directory: frontend
+        run: flutter pub get
+      - name: Flutter analyze
+        working-directory: frontend
+        run: flutter analyze
+      - name: Flutter test
+        working-directory: frontend
+        run: flutter test
