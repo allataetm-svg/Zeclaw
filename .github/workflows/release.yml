@@ -1,0 +1,136 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-backend:
+    name: Build Go Backend
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: android
+            arch: arm64
+          - os: android
+            arch: arm
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      
+      - name: Build for ${{ matrix.os }}-${{ matrix.arch }}
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: 0
+        run: |
+          cd backend
+          if [ "$GOOS" = "android" ]; then
+            go build -o ../frontend/assets/backend/zeclaw-backend-${{ matrix.arch }} ./cmd/zeclaw/
+          else
+            go build -o zeclaw-${{ matrix.arch }} ./cmd/zeclaw/
+          fi
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            frontend/assets/backend/zeclaw-backend-*
+            backend/zeclaw-*
+
+  build-android:
+    name: Build Flutter Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v2
+      
+      - name: Create local.properties
+        run: |
+          echo "flutter.sdk=$FLUTTER_ROOT" >> $GITHUB_WORKSPACE/frontend/local.properties
+          echo "sdk.dir=$ANDROID_HOME" >> $GITHUB_WORKSPACE/frontend/local.properties
+      
+      - name: Update Gradle version
+        run: |
+          cd $GITHUB_WORKSPACE/frontend/android/gradle/wrapper
+          sed -i 's/gradle-.*-all.zip/gradle-8.10.2-all.zip/' gradle-wrapper.properties
+      
+      - name: Update Android Gradle Plugin
+        run: |
+          cd $GITHUB_WORKSPACE/frontend/android
+          sed -i 's/id "com.android.application" version ".*"/id "com.android.application" version "8.7.0"/' settings.gradle
+          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "2.1.0"/' settings.gradle
+      
+      - name: Update build.gradle
+        run: |
+          cd $GITHUB_WORKSPACE/frontend/android/app
+          sed -i 's/JavaVersion.VERSION_1_8/JavaVersion.VERSION_17/g' build.gradle
+          sed -i 's/ndkVersion = flutter.ndkVersion/ndkVersion = "27.0.12077973"/' build.gradle
+      
+      - name: Create assets directory
+        run: mkdir -p $GITHUB_WORKSPACE/frontend/assets/backend
+      
+      - name: Build debug APK
+        working-directory: $GITHUB_WORKSPACE/frontend
+        run: flutter build apk --debug
+      
+      - name: Build release APK
+        working-directory: $GITHUB_WORKSPACE/frontend
+        run: flutter build apk --release
+      
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-apks
+          path: |
+            frontend/build/app/outputs/flutter-apk/*-release.apk
+            frontend/build/app/outputs/flutter-apk/*-debug.apk
+
+  release:
+    name: Create Release
+    needs: [build-backend, build-android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/flutter-apks/*-release.apk
+            artifacts/backend-linux-amd64/zeclaw-linux-amd64
+            artifacts/backend-android-arm64/zeclaw-backend-arm64
+            artifacts/backend-android-arm/zeclaw-backend-arm
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TAG_TOKEN }}

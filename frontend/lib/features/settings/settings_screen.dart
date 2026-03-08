@@ -117,7 +117,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: connectionState == ConnectionState.connected
+                    color: connectionState == WsConnectionState.connected
                         ? ZeclawColors.accentSuccess
                         : ZeclawColors.accentError,
                     shape: BoxShape.circle,
@@ -125,9 +125,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  connectionState == ConnectionState.connected ? 'Connected' : 'Disconnected',
+                  connectionState == WsConnectionState.connected ? 'Connected' : 'Disconnected',
                   style: TextStyle(
-                    color: connectionState == ConnectionState.connected
+                    color: connectionState == WsConnectionState.connected
                         ? ZeclawColors.accentSuccess
                         : ZeclawColors.accentError,
                     fontSize: 13,

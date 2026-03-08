@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/models.dart';
 
-enum ConnectionState { disconnected, connecting, connected }
+enum WsConnectionState { disconnected, connecting, connected }
 
 typedef MessageHandler = void Function(WsEnvelope envelope);
 
@@ -14,7 +14,7 @@ class WebSocketClient extends ChangeNotifier {
   static const _maxReconnectDelay = Duration(seconds: 30);
 
   WebSocketChannel? _channel;
-  ConnectionState _connectionState = ConnectionState.disconnected;
+  WsConnectionState _connectionState = WsConnectionState.disconnected;
   Duration _reconnectDelay = const Duration(seconds: 1);
   Timer? _reconnectTimer;
   bool _disposed = false;
@@ -22,8 +22,8 @@ class WebSocketClient extends ChangeNotifier {
   final _uuid = const Uuid();
   final List<MessageHandler> _handlers = [];
 
-  ConnectionState get connectionState => _connectionState;
-  bool get isConnected => _connectionState == ConnectionState.connected;
+  WsConnectionState get connectionState => _connectionState;
+  bool get isConnected => _connectionState == WsConnectionState.connected;
 
   void addHandler(MessageHandler handler) {
     _handlers.add(handler);
@@ -34,13 +34,13 @@ class WebSocketClient extends ChangeNotifier {
   }
 
   void connect() {
-    if (_connectionState != ConnectionState.disconnected) return;
+    if (_connectionState != WsConnectionState.disconnected) return;
     _doConnect();
   }
 
   void _doConnect() {
     if (_disposed) return;
-    _setConnectionState(ConnectionState.connecting);
+    _setConnectionState(WsConnectionState.connecting);
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
       _channel!.stream.listen(
@@ -49,7 +49,7 @@ class WebSocketClient extends ChangeNotifier {
         onDone: _onDone,
         cancelOnError: false,
       );
-      _setConnectionState(ConnectionState.connected);
+      _setConnectionState(WsConnectionState.connected);
       _reconnectDelay = const Duration(seconds: 1);
     } catch (e) {
       debugPrint('WebSocket connect error: $e');
@@ -71,12 +71,12 @@ class WebSocketClient extends ChangeNotifier {
 
   void _onError(Object error) {
     debugPrint('WebSocket error: $error');
-    _setConnectionState(ConnectionState.disconnected);
+    _setConnectionState(WsConnectionState.disconnected);
     _scheduleReconnect();
   }
 
   void _onDone() {
-    _setConnectionState(ConnectionState.disconnected);
+    _setConnectionState(WsConnectionState.disconnected);
     _scheduleReconnect();
   }
 
@@ -84,7 +84,7 @@ class WebSocketClient extends ChangeNotifier {
     if (_disposed) return;
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(_reconnectDelay, () {
-      if (_connectionState == ConnectionState.disconnected && !_disposed) {
+      if (_connectionState == WsConnectionState.disconnected && !_disposed) {
         _doConnect();
       }
     });
@@ -93,7 +93,7 @@ class WebSocketClient extends ChangeNotifier {
     );
   }
 
-  void _setConnectionState(ConnectionState state) {
+  void _setConnectionState(WsConnectionState state) {
     if (_connectionState == state) return;
     _connectionState = state;
     if (!_disposed) notifyListeners();

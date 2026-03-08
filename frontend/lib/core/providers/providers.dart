@@ -12,7 +12,7 @@ final wsClientProvider = ChangeNotifierProvider<WebSocketClient>((ref) {
 });
 
 // Connection state
-final connectionStateProvider = Provider<ConnectionState>((ref) {
+final connectionStateProvider = Provider<WsConnectionState>((ref) {
   final client = ref.watch(wsClientProvider);
   return client.connectionState;
 });
