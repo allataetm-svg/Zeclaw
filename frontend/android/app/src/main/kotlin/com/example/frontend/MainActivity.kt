@@ -85,9 +85,38 @@ class MainActivity: FlutterActivity() {
         binaryFile.setExecutable(true)
         binaryFile.setReadable(true)
 
-        // Launch backend in background
+        // Launch backend in background and wait for it to start listening
         try {
-            Runtime.getRuntime().exec(arrayOf("sh", "-c", "chmod 755 ${binaryFile.absolutePath} && ${binaryFile.absolutePath} &"), null, backendDir)
+            val logFile = File(filesDir, "zeclaw.log")
+            val cmd = "chmod 755 ${binaryFile.absolutePath} && ${binaryFile.absolutePath} > ${logFile.absolutePath} 2>&1 & echo \$!"
+            val proc = Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd), null, backendDir)
+            proc.inputStream.bufferedReader().use { reader ->
+                val pid = reader.readText().trim()
+                // pid may be empty, but we continue to poll
+            }
+
+            // Poll for up to 8 seconds for the backend to start listening
+            val start = System.currentTimeMillis()
+            val timeoutMs = 8000L
+            var started = false
+            while (System.currentTimeMillis() - start < timeoutMs) {
+                if (isBackendRunning()) {
+                    started = true
+                    break
+                }
+                Thread.sleep(500)
+            }
+
+            if (!started) {
+                // Read tail of log file for error details
+                val logText = if (logFile.exists()) {
+                    val content = logFile.readText()
+                    if (content.length > 8000) content.takeLast(8000) else content
+                } else {
+                    "(no log file)"
+                }
+                throw Exception("Backend failed to start or listen on port 8085. Log:\n$logText")
+            }
         } catch (e: Exception) {
             throw Exception("Failed to start backend: ${e.message}")
         }
