@@ -62,13 +62,33 @@ class MainActivity: FlutterActivity() {
         val context = applicationContext
         val filesDir = context.filesDir
         val backendDir = File(filesDir, "backend")
-        val nativeLibDir = File(context.applicationInfo.nativeLibraryDir)
 
         if (!backendDir.exists()) {
             backendDir.mkdirs()
         }
 
-        val binaryFile = File(nativeLibDir, "libzeclaw.so")
+        val binaryFile = File(backendDir, "zeclaw")
+
+        if (!binaryFile.exists()) {
+            // Extract binary from assets
+            try {
+                val assetManager = context.assets
+                val assetFiles = assetManager.list("backend") ?: emptyArray()
+                val binaryAssetName = assetFiles.find { it.contains("zeclaw-backend") }
+                if (binaryAssetName == null) {
+                    return "Backend binary not found in assets folder"
+                }
+                assetManager.open("backend/$binaryAssetName").use { input ->
+                    binaryFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                binaryFile.setExecutable(true)
+                binaryFile.setReadable(true)
+            } catch (e: Exception) {
+                return "Failed to extract backend from assets: ${e.message}"
+            }
+        }
 
         // Collect permission/debug info for the binary so we can diagnose execution issues
         val permissionDebugBuilder = StringBuilder()
@@ -115,14 +135,14 @@ class MainActivity: FlutterActivity() {
                 permissionDebugBuilder.append("ls -Z not available or failed: ${e.message}\n")
             }
 
-            // ls -Z on nativeLibDir to show SELinux context of binary location
+            // ls -Z on binary to show SELinux context
             try {
-                val lsZ = Runtime.getRuntime().exec(arrayOf("ls", "-Z", nativeLibDir.absolutePath))
+                val lsZ = Runtime.getRuntime().exec(arrayOf("ls", "-Z", binaryFile.absolutePath))
                 lsZ.waitFor(2, TimeUnit.SECONDS)
                 val out = lsZ.inputStream.bufferedReader().use { it.readText().trim() }
-                permissionDebugBuilder.append("ls -Z ${nativeLibDir.absolutePath}:\n${out.takeLast(Math.min(out.length, 2000))}\n")
+                permissionDebugBuilder.append("ls -Z ${binaryFile.absolutePath}:\n${out.takeLast(Math.min(out.length, 2000))}\n")
             } catch (e: Exception) {
-                permissionDebugBuilder.append("ls -Z nativeLibDir failed: ${e.message}\n")
+                permissionDebugBuilder.append("ls -Z binary failed: ${e.message}\n")
             }
 
             // /system/bin/id to show uid/gid
@@ -141,10 +161,6 @@ class MainActivity: FlutterActivity() {
         val permissionDebug = permissionDebugBuilder.toString()
         if (permissionDebug.isNotEmpty()) {
             backendOutput.append(permissionDebug)
-        }
-
-        if (!binaryFile.exists()) {
-            return "Backend binary not found in assets"
         }
 
         binaryFile.setExecutable(true)
