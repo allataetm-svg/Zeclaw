@@ -14,15 +14,19 @@ import java.util.concurrent.TimeUnit
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.zeclaw.backend/start"
 
+    private var backendProcess: Process? = null
+    private val backendOutput = StringBuilder()
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "startBackend" -> {
                     try {
-                        startBackend()
-                        result.success(true)
+                        val msg = startBackend()
+                        // return null on success, or log message on failure
+                        if (msg == null) result.success(true) else result.error("START_ERROR", msg, null)
                     } catch (e: Exception) {
                         result.error("START_ERROR", e.message, null)
                     }
@@ -40,6 +44,14 @@ class MainActivity: FlutterActivity() {
                         result.error("EXEC_ERROR", e.message, null)
                     }
                 }
+                "getBackendLog" -> {
+                    try {
+                        val log = getBackendLog()
+                        result.success(log)
+                    } catch (e: Exception) {
+                        result.error("LOG_ERROR", e.message, null)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }
@@ -47,12 +59,12 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun startBackend() {
+    private fun startBackend(): String? {
         val context = applicationContext
         val assets = context.resources.assets
         val cacheDir = context.cacheDir
         val backendDir = File(cacheDir, "backend")
-        
+
         if (!backendDir.exists()) {
             backendDir.mkdirs()
         }
@@ -67,7 +79,7 @@ class MainActivity: FlutterActivity() {
         }
 
         val binaryFile = File(backendDir, "zeclaw")
-        
+
         try {
             assets.open("flutter_assets/assets/backend/$binaryName").use { input ->
                 binaryFile.outputStream().use { output ->
@@ -75,36 +87,43 @@ class MainActivity: FlutterActivity() {
                 }
             }
         } catch (e: Exception) {
-            throw Exception("Failed to extract backend: ${e.message}")
+            return "Failed to extract backend: ${e.message}"
         }
 
         if (!binaryFile.exists()) {
-            throw Exception("Backend binary not found in assets")
+            return "Backend binary not found in assets"
         }
 
         binaryFile.setExecutable(true)
         binaryFile.setReadable(true)
 
-        // Try several candidate listen addresses if the first fails.
         val candidates = listOf("127.0.0.1:8085", "0.0.0.0:8085", "127.0.0.1:8086")
-        try {
-            val logFile = File(filesDir, "zeclaw.log")
-            var started = false
-            val attempted = mutableListOf<String>()
-            for (addr in candidates) {
-                attempted.add(addr)
-                // Start backend with explicit address
-                val cmd = "chmod 755 ${binaryFile.absolutePath} && ${binaryFile.absolutePath} -addr $addr > ${logFile.absolutePath} 2>&1 & echo \$!"
-                val proc = Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd), null, backendDir)
-                proc.inputStream.bufferedReader().use { reader ->
-                    val pid = reader.readText().trim()
+        val logFile = File(backendDir, "zeclaw.log")
+        backendOutput.clear()
+
+        for (addr in candidates) {
+            try {
+                // Start the backend with ProcessBuilder so we can capture output
+                val (host, portStr) = addr.split(":")
+                val port = portStr.toInt()
+                val pb = ProcessBuilder(binaryFile.absolutePath, "-addr", addr)
+                pb.directory(backendDir)
+                pb.redirectErrorStream(true)
+                // write output to backendDir/zeclaw.log
+                pb.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
+                try {
+                    val proc = pb.start()
+                    backendProcess = proc
+                } catch (e: Exception) {
+                    // record and try next candidate
+                    backendOutput.append("Failed to exec binary for $addr: ${e.message}\n")
+                    continue
                 }
 
-                // Poll for up to 8 seconds for the backend to start listening on this addr
-                val host = addr.split(":")[0]
-                val port = addr.split(":")[1].toInt()
+                // poll for up to 8s
                 val start = System.currentTimeMillis()
                 val timeoutMs = 8000L
+                var started = false
                 while (System.currentTimeMillis() - start < timeoutMs) {
                     if (isBackendRunning(host, port)) {
                         started = true
@@ -113,21 +132,26 @@ class MainActivity: FlutterActivity() {
                     Thread.sleep(500)
                 }
 
-                if (started) break
-            }
-
-            if (!started) {
-                val logText = if (logFile.exists()) {
+                // also capture a bit of log
+                if (logFile.exists()) {
                     val content = logFile.readText()
-                    if (content.length > 8000) content.takeLast(8000) else content
-                } else {
-                    "(no log file)"
+                    backendOutput.append(content.takeLast(Math.min(content.length, 8000)))
                 }
-                throw Exception("Backend failed to start or listen on any candidate addresses (${attempted.joinToString(",")} ). Log:\n$logText")
+
+                if (started) {
+                    return null // success
+                } else {
+                    // stop process if still running
+                    try { backendProcess?.destroyForcibly() } catch (_: Exception) {}
+                    backendOutput.append("Backend did not start listening on $addr\n")
+                }
+            } catch (e: Exception) {
+                backendOutput.append("Error trying $addr: ${e.message}\n")
             }
-        } catch (e: Exception) {
-            throw Exception("Failed to start backend: ${e.message}")
         }
+
+        val out = backendOutput.toString()
+        return "Backend failed to start on any address. Log:\n$out"
     }
 
     private fun isBackendRunning(host: String = "127.0.0.1", port: Int = 8085): Boolean {
