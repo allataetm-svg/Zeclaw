@@ -20,4 +20,17 @@ class BackendService {
       return false;
     }
   }
+
+  // Execute a shell command on the Android device and return stdout+stderr.
+  static Future<String> execShell(String command, {int timeoutSeconds = 30}) async {
+    try {
+      final result = await _channel.invokeMethod<String>('execShell', {
+        'command': command,
+        'timeout': timeoutSeconds,
+      });
+      return result ?? '';
+    } on PlatformException catch (e) {
+      return 'Error: ${e.message}';
+    }
+  }
 }

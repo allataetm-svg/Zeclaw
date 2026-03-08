@@ -30,10 +30,12 @@ jobs:
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
-          CGO_ENABLED: 0
+          CGO_ENABLED: ${{ matrix.os == 'linux' && '1' || '0' }}
         run: |
           cd backend
+          # Ensure frontend assets dir exists for Android builds
           if [ "$GOOS" = "android" ]; then
+            mkdir -p ../frontend/assets/backend
             go build -o ../frontend/assets/backend/zeclaw-backend-${{ matrix.arch }} ./cmd/zeclaw/
           else
             go build -o zeclaw-${{ matrix.arch }} ./cmd/zeclaw/
@@ -75,14 +77,22 @@ jobs:
       
       - name: Update Gradle version
         run: |
-          cd $GITHUB_WORKSPACE/frontend/android/gradle/wrapper
-          sed -i 's/gradle-.*-all.zip/gradle-8.10.2-all.zip/' gradle-wrapper.properties
+          if [ -d "$GITHUB_WORKSPACE/frontend/android/gradle/wrapper" ]; then
+            cd $GITHUB_WORKSPACE/frontend/android/gradle/wrapper
+            sed -i 's/gradle-.*-all.zip/gradle-8.10.2-all.zip/' gradle-wrapper.properties
+          else
+            echo "No gradle/wrapper directory found, skipping"
+          fi
       
       - name: Update Android Gradle Plugin
         run: |
-          cd $GITHUB_WORKSPACE/frontend/android
-          sed -i 's/id "com.android.application" version ".*"/id "com.android.application" version "8.7.0"/' settings.gradle
-          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "2.1.0"/' settings.gradle
+          if [ -f "$GITHUB_WORKSPACE/frontend/android/settings.gradle" ]; then
+            cd $GITHUB_WORKSPACE/frontend/android
+            sed -i 's/id "com.android.application" version ".*"/id "com.android.application" version "8.7.0"/' settings.gradle
+            sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "2.1.0"/' settings.gradle
+          else
+            echo "settings.gradle not found, skipping"
+          fi
       
       - name: Update build.gradle
         run: |
