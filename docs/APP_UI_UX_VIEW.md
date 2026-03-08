@@ -12,6 +12,9 @@
 4. [Component Library](#4-component-library)
 5. [User Flows](#5-user-flows)
 6. [Interaction Patterns](#6-interaction-patterns)
+7. [Agentic Feature Screens](#7-agentic-feature-screens)
+8. [Agentic Feature Components](#8-agentic-feature-components)
+9. [Agentic Feature User Flows](#9-agentic-feature-user-flows)
 
 ---
 
@@ -530,3 +533,654 @@ User navigates to Dashboard tab
 - Status indicators use both color AND icon/text (not color alone)
 - Support for system font scaling
 - High contrast between text and background (WCAG AA minimum)
+
+---
+
+## 7. Agentic Feature Screens
+
+> These screens support the advanced agentic capabilities (heartbeat, cron, doctor, skills, memory, hooks, workspace, audit trail, approval gates) researched from OpenClaw, Nanobot, OpenFang, PicoClaw, and other alternatives.
+
+### 7.1 Agent Detail View (Enhanced)
+
+The existing agent card on Dashboard expands into a full Agent Detail View with tabbed navigation for the new features.
+
+```
+┌────────────────────────────────────┐
+│  ← Agent: Sam                      │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │ [Chat] [Memory] [Skills]    │  │
+│  │ [Cron] [Hooks] [Files]      │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │ Status: IDLE   ● Online      │  │
+│  │ Heartbeat: ON (every 30m)    │  │
+│  │ Active Crons: 3              │  │
+│  │ Memories: 42                 │  │
+│  │ Skills: 2 loaded             │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │        [Tab Content]         │  │
+│  │      (see sections below)    │  │
+│  │                              │  │
+│  │                              │  │
+│  │                              │  │
+│  │                              │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌────┐ ┌──────┐ ┌────────┐       │
+│  │Chat│ │Dashbd│ │Settings│       │
+│  └────┘ └──────┘ └────────┘       │
+└────────────────────────────────────┘
+```
+
+### 7.2 Memory Browser Screen
+
+Accessible from Agent Detail → Memory tab.
+
+```
+┌────────────────────────────────────┐
+│  Memory  (42 total)                │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │ 🔍 Search memories...        │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │ Category: [All ▾]            │  │
+│  │ Sort: [Importance ▾]         │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  FACT                        │  │
+│  │  "User prefers TypeScript    │  │
+│  │   over JavaScript"           │  │
+│  │  Importance: ████████░░ 0.8  │  │
+│  │  2 days ago                  │  │
+│  │                  ← swipe del │  │
+│  ├──────────────────────────────┤  │
+│  │  INSTRUCTION                 │  │
+│  │  "Always run tests before    │  │
+│  │   committing code"           │  │
+│  │  Importance: ██████████ 1.0  │  │
+│  │  5 days ago                  │  │
+│  ├──────────────────────────────┤  │
+│  │  LEARNED                     │  │
+│  │  "Project uses pnpm, not     │  │
+│  │   npm"                       │  │
+│  │  Importance: ██████░░░░ 0.6  │  │
+│  │  12 days ago                 │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  Stats: 15 facts, 8 instructions,  │
+│         12 learned, 7 preferences  │
+└────────────────────────────────────┘
+```
+
+### 7.3 Cron / Scheduled Tasks Screen
+
+Accessible from Agent Detail → Cron tab.
+
+```
+┌────────────────────────────────────┐
+│  Scheduled Tasks  (3 active)       │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Daily Summary               │  │
+│  │  ⏰ every day at 09:00       │  │
+│  │  Mode: isolated              │  │
+│  │  Last run: today 09:00       │  │
+│  │  Next run: tomorrow 09:00    │  │
+│  │  [ON ●]              [Edit]  │  │
+│  ├──────────────────────────────┤  │
+│  │  Check Dependencies          │  │
+│  │  ⏰ every 2h                 │  │
+│  │  Mode: main session          │  │
+│  │  Last run: 45m ago           │  │
+│  │  Next run: in 1h 15m         │  │
+│  │  [ON ●]              [Edit]  │  │
+│  ├──────────────────────────────┤  │
+│  │  Meeting Reminder            │  │
+│  │  ⏰ one-shot: Mar 8, 14:30   │  │
+│  │  Mode: main session          │  │
+│  │  Status: pending             │  │
+│  │  [ON ●]              [Edit]  │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│        [ + New Scheduled Task ]    │
+│                                    │
+└────────────────────────────────────┘
+```
+
+### 7.4 Heartbeat Configuration
+
+Accessible from Agent Detail → Settings gear icon (per-agent settings).
+
+```
+┌────────────────────────────────────┐
+│  Heartbeat Configuration           │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Enable Heartbeat   [● ON]  │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Interval                    │  │
+│  │  [15m] [30m●] [1h] [2h]     │  │
+│  │  Custom: [____] minutes      │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Active Hours                │  │
+│  │  From: [08:00 ▾]             │  │
+│  │  To:   [22:00 ▾]             │  │
+│  │                              │  │
+│  │  ☐ Respect battery saver     │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Output Target               │  │
+│  │  ○ Surface to chat           │  │
+│  │  ● Silent (log only)         │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  HEARTBEAT.md                │  │
+│  │  ┌────────────────────────┐  │  │
+│  │  │ # Heartbeat Checklist  │  │  │
+│  │  │ - Check bg tasks       │  │  │
+│  │  │ - Look for new files   │  │  │
+│  │  │ - Check error queue    │  │  │
+│  │  └────────────────────────┘  │  │
+│  │              [Edit Checklist] │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│         [ Save Configuration ]     │
+└────────────────────────────────────┘
+```
+
+### 7.5 Doctor / Diagnostics Screen
+
+Accessible from Settings → "Run Doctor" button.
+
+```
+┌────────────────────────────────────┐
+│  ← System Diagnostics              │
+│                                    │
+│  Overall: ⚠ DEGRADED              │
+│  Last run: just now                │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  ✓ Configuration             │  │
+│  │    ✓ Settings present        │  │
+│  │    ✓ Endpoint URLs valid     │  │
+│  │    ✓ API keys present        │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  ⚠ Providers                 │  │
+│  │    ✓ GPT-4 Cloud (230ms)     │  │
+│  │    ✗ Local Ollama            │  │
+│  │      "connection refused"    │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  ✓ Tools                     │  │
+│  │    ✓ Shell available         │  │
+│  │    ✓ Read file available     │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  ✓ System                    │  │
+│  │    ✓ Backend alive           │  │
+│  │    ✓ SQLite integrity OK     │  │
+│  │    ✓ Storage: 2.1 GB free    │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Suggestions:                │  │
+│  │  • Ollama is not reachable   │  │
+│  │    at localhost:11434.       │  │
+│  │    Start Ollama or update    │  │
+│  │    the endpoint in Settings. │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│          [ Run Again ]             │
+└────────────────────────────────────┘
+```
+
+### 7.6 Skills Management Screen
+
+Accessible from Agent Detail → Skills tab.
+
+```
+┌────────────────────────────────────┐
+│  Skills  (2 loaded)                │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Built-in                    │  │
+│  │  ┌────────────────────────┐  │  │
+│  │  │ ★ General Assistant    │  │  │
+│  │  │   Default skill        │  │  │
+│  │  │   Tools: all        ON │  │  │
+│  │  └────────────────────────┘  │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Workspace Skills            │  │
+│  │  ┌────────────────────────┐  │  │
+│  │  │ ◆ Coding Assistant     │  │  │
+│  │  │   Expert coding help   │  │  │
+│  │  │   Tools: shell,     ON │  │  │
+│  │  │          read_file     │  │  │
+│  │  │            [View] [Edit]│  │  │
+│  │  └────────────────────────┘  │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│        [ + Create New Skill ]      │
+│                                    │
+└────────────────────────────────────┘
+```
+
+### 7.7 Hooks Management Screen
+
+Accessible from Agent Detail → Hooks tab.
+
+```
+┌────────────────────────────────────┐
+│  Hooks  (2 active)                 │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  on_task_complete → notify   │  │
+│  │  "Send summary to chat"      │  │
+│  │  Fired: 12 times             │  │
+│  │  Last: 2h ago                │  │
+│  │  [ON ●]              [Edit]  │  │
+│  ├──────────────────────────────┤  │
+│  │  on_task_error → retry       │  │
+│  │  Max retries: 2, backoff 10s │  │
+│  │  Fired: 3 times              │  │
+│  │  Last: yesterday             │  │
+│  │  [ON ●]              [Edit]  │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│          [ + Create Hook ]         │
+│                                    │
+└────────────────────────────────────┘
+```
+
+### 7.8 Workspace / Files Browser Screen
+
+Accessible from Agent Detail → Files tab.
+
+```
+┌────────────────────────────────────┐
+│  Files  (Agent: Sam)               │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  📄 MEMORY.md         1.2KB  │  │
+│  │  📄 HEARTBEAT.md       340B  │  │
+│  │  📄 SESSION-STATE.md   890B  │  │
+│  │  📁 skills/                  │  │
+│  │     └─ 📄 coding-assistant   │  │
+│  │              .md      2.1KB  │  │
+│  │  📁 outputs/                 │  │
+│  │     ├─ 📄 report.md   4.5KB  │  │
+│  │     └─ 📄 analysis    1.8KB  │  │
+│  │              .json           │  │
+│  │  📁 temp/         (empty)    │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │  Shared Files                │  │
+│  │  📄 AGENTS.md         560B   │  │
+│  │  📁 knowledge/               │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  Tap a file to view contents       │
+└────────────────────────────────────┘
+```
+
+### 7.9 Audit Log Screen
+
+Accessible from Settings → "Audit Log" or Dashboard per-agent → "View Logs".
+
+```
+┌────────────────────────────────────┐
+│  ← Audit Log                       │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │ Agent: [All ▾]  Type: [All▾]│  │
+│  │ Date: [Last 7 days ▾]       │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │ ● tool_call         12:04:30│  │
+│  │   Sam → shell                │  │
+│  │   "npm install express"      │  │
+│  │   Duration: 3.2s  ✓ Success  │  │
+│  │                     [Expand] │  │
+│  ├──────────────────────────────┤  │
+│  │ ● llm_request       12:04:28│  │
+│  │   Sam → GPT-4                │  │
+│  │   Tokens: 450→120  230ms     │  │
+│  │   Cost: ~$0.003              │  │
+│  │                     [Expand] │  │
+│  ├──────────────────────────────┤  │
+│  │ ● state_change      12:04:27│  │
+│  │   Sam: IDLE → THINKING       │  │
+│  │   Trigger: user_message      │  │
+│  ├──────────────────────────────┤  │
+│  │ ⚠ approval_request  12:03:15│  │
+│  │   Sam → shell                │  │
+│  │   "rm -rf node_modules/"     │  │
+│  │   Risk: HIGH  → Approved     │  │
+│  │                     [Expand] │  │
+│  └──────────────────────────────┘  │
+│                                    │
+│        [ Export JSON ]             │
+└────────────────────────────────────┘
+```
+
+### 7.10 Approval Dialog (Overlay)
+
+This appears as a modal overlay on ANY screen when an agent requests approval.
+
+```
+┌────────────────────────────────────┐
+│                                    │
+│  (current screen dimmed behind)    │
+│                                    │
+│  ┌──────────────────────────────┐  │
+│  │                              │  │
+│  │   ⚠ Approval Required        │  │
+│  │                              │  │
+│  │   Agent: Sam                 │  │
+│  │                              │  │
+│  │   Action: shell              │  │
+│  │   Command:                   │  │
+│  │   ┌────────────────────────┐ │  │
+│  │   │ rm -rf node_modules/  │ │  │
+│  │   └────────────────────────┘ │  │
+│  │                              │  │
+│  │   Risk Level: ██ HIGH        │  │
+│  │   Reason: Destructive file   │  │
+│  │   operation detected         │  │
+│  │                              │  │
+│  │   Expires in: 4:32           │  │
+│  │                              │  │
+│  │   ┌────────┐  ┌──────────┐  │  │
+│  │   │  Deny  │  │ Approve  │  │  │
+│  │   └────────┘  └──────────┘  │  │
+│  │                              │  │
+│  └──────────────────────────────┘  │
+│                                    │
+└────────────────────────────────────┘
+```
+
+---
+
+## 8. Agentic Feature Components
+
+### 8.1 New Color Tokens
+
+| Token                  | Hex       | Usage                                      |
+|------------------------|-----------|---------------------------------------------|
+| `accent-heartbeat`     | `#8B5CF6` | Heartbeat indicators, pulse animation       |
+| `accent-cron`          | `#06B6D4` | Cron/schedule indicators, timer icons       |
+| `accent-memory`        | `#EC4899` | Memory category badges, memory browser      |
+| `accent-skill`         | `#10B981` | Skill cards, skill status indicators        |
+| `accent-approval-warn` | `#F97316` | Approval dialog warning state               |
+| `accent-audit`         | `#6366F1` | Audit log entries, log viewer               |
+| `risk-low`             | `#22C55E` | Low risk badge                              |
+| `risk-medium`          | `#F59E0B` | Medium risk badge                           |
+| `risk-high`            | `#EF4444` | High risk badge                             |
+| `risk-critical`        | `#DC2626` | Critical risk badge (darker red)            |
+
+### 8.2 Reusable Components
+
+#### Memory Card
+
+```
+┌──────────────────────────────────┐
+│  [CATEGORY BADGE]                │
+│  "Memory content text, truncated │
+│   at 2 lines..."                 │
+│  Importance: ████████░░ 0.8      │
+│  Created: 2 days ago             │
+│                     ← swipe del  │
+└──────────────────────────────────┘
+```
+
+- Category badge: colored pill (`accent-memory` variants)
+  - FACT = blue, INSTRUCTION = amber, LEARNED = green, PREFERENCE = purple
+- Importance bar: horizontal progress bar (0.0 → 1.0)
+- Swipe-to-delete gesture
+
+#### Cron Task Card
+
+```
+┌──────────────────────────────────┐
+│  Task Name                       │
+│  ⏰ schedule expression          │
+│  Mode: main | isolated           │
+│  Last: time ago  Next: in time   │
+│  [ON/OFF ●]              [Edit]  │
+└──────────────────────────────────┘
+```
+
+- Toggle switch for enable/disable
+- Next-run countdown timer (live update every minute)
+- Edit opens bottom sheet with full cron editor
+
+#### Skill Card
+
+```
+┌──────────────────────────────────┐
+│  ★/◆ Skill Name           [ON]  │
+│  Description text                │
+│  Tools: shell, read_file         │
+│                  [View] [Edit]   │
+└──────────────────────────────────┘
+```
+
+- ★ = built-in skill, ◆ = workspace skill
+- Tools list shows required tools as chips
+- Toggle to enable/disable skill for this agent
+
+#### Hook Card
+
+```
+┌──────────────────────────────────┐
+│  EVENT → ACTION                  │
+│  "Description / config summary"  │
+│  Fired: N times  Last: time ago  │
+│  [ON/OFF ●]              [Edit]  │
+└──────────────────────────────────┘
+```
+
+#### Audit Log Entry
+
+```
+┌──────────────────────────────────┐
+│  ● event_type           HH:MM:SS│
+│    Agent → target                │
+│    "Summary text"                │
+│    Duration / Tokens / Cost      │
+│                        [Expand]  │
+└──────────────────────────────────┘
+```
+
+- Color-coded dot: green (success), red (error), amber (approval), blue (info)
+- Expandable to show full JSON data
+
+#### Doctor Check Row
+
+```
+┌──────────────────────────────────┐
+│  ✓/✗/⚠  Check Name              │
+│  Detail text (latency, error)    │
+└──────────────────────────────────┘
+```
+
+- ✓ green for pass, ✗ red for fail, ⚠ amber for warning
+- Expandable for detailed info
+
+### 8.3 Animations for Agentic Features
+
+| Interaction              | Animation                                                    |
+|--------------------------|--------------------------------------------------------------|
+| Heartbeat pulse          | Agent avatar pulses `accent-heartbeat` at heartbeat interval |
+| Cron task fires          | Brief flash on cron card + notification toast                |
+| Approval dialog appear   | Slide up from bottom with backdrop blur (300ms spring)       |
+| Approval countdown       | Circular progress indicator counting down from 5:00          |
+| Memory stored            | Brief sparkle animation on memory tab badge                  |
+| Doctor running           | Section-by-section reveal with loading spinner per section   |
+| Hook fired               | Brief highlight flash on hook card (200ms)                   |
+| Audit entry appear       | Fade in from top of list (150ms)                             |
+
+---
+
+## 9. Agentic Feature User Flows
+
+### 9.1 Configure Heartbeat
+
+```
+User opens Dashboard
+  │
+  ├─ Taps agent card → Agent Detail View
+  │
+  ├─ Taps gear icon → Agent Settings
+  │
+  ├─ Scrolls to Heartbeat section
+  │
+  ├─ Toggles "Enable Heartbeat" ON
+  │
+  ├─ Selects interval (30m)
+  │
+  ├─ Sets active hours (08:00 - 22:00)
+  │
+  ├─ Optionally edits HEARTBEAT.md checklist
+  │
+  ├─ Taps "Save Configuration"
+  │
+  ├─ Backend starts heartbeat scheduler
+  │
+  └─ Agent avatar shows subtle pulse animation
+     Every 30m (during active hours):
+       │
+       ├─ Heartbeat runs silently
+       ├─ If issue found → message appears in chat
+       └─ If all clear → logged silently in audit trail
+```
+
+### 9.2 Create a Scheduled Task (Cron)
+
+```
+User opens Agent Detail → Cron tab
+  │
+  ├─ Taps "+ New Scheduled Task"
+  │
+  ├─ Bottom sheet opens:
+  │    ├─ Task name: "Daily Summary"
+  │    ├─ Task description: "Summarize what happened today"
+  │    ├─ Schedule type: [Cron Expression] [Interval] [One-time]
+  │    │    ├─ Cron: "0 9 * * *" (daily at 9am)
+  │    │    ├─ Interval: "every 2h"
+  │    │    └─ One-time: date/time picker
+  │    ├─ Run mode: [Main Session ●] [Isolated]
+  │    └─ Announce to chat: [ON]
+  │
+  ├─ Taps "Create"
+  │
+  ├─ Cron card appears in list with next-run countdown
+  │
+  └─ When cron fires:
+       ├─ Toast notification: "Cron: Daily Summary started"
+       ├─ Agent runs task
+       └─ Result appears in chat (if announce=ON)
+```
+
+### 9.3 Run Doctor Diagnostics
+
+```
+User opens Settings
+  │
+  ├─ Taps "Run Doctor"
+  │
+  ├─ DoctorReportScreen opens
+  │
+  ├─ Sections appear one by one with loading spinners:
+  │    ├─ Configuration... ✓
+  │    ├─ Providers... ⚠ (Ollama unreachable)
+  │    ├─ Tools... ✓
+  │    └─ System... ✓
+  │
+  ├─ Overall status banner: "DEGRADED"
+  │
+  ├─ Suggestions section:
+  │    "Ollama is not reachable at localhost:11434.
+  │     Start Ollama or update the endpoint in Settings."
+  │
+  ├─ User taps suggestion → navigates to Settings → Endpoints
+  │
+  └─ User taps "Run Again" to verify fix
+```
+
+### 9.4 Approval Gate Flow
+
+```
+User is on any screen (e.g., Chat)
+  │
+  ├─ Agent tries to run: rm -rf node_modules/
+  │
+  ├─ Backend detects HIGH risk → pauses agent
+  │
+  ├─ Approval dialog slides up over current screen:
+  │    ├─ Shows: agent name, action, command, risk level
+  │    ├─ Countdown timer: 5:00 → 0:00
+  │    ├─ [Deny] [Approve] buttons
+  │
+  ├─ User decision:
+  │    ├─ Approve → agent continues, executes command
+  │    ├─ Deny → agent receives denial, adapts plan
+  │    └─ Timeout → auto-deny after 5 minutes
+  │
+  └─ Approval logged to audit trail
+```
+
+### 9.5 Browse Agent Memory
+
+```
+User opens Agent Detail → Memory tab
+  │
+  ├─ Sees list of all memories sorted by importance
+  │
+  ├─ Can filter by category (Fact, Instruction, Learned, Preference)
+  │
+  ├─ Can search: types "TypeScript" → filtered results
+  │
+  ├─ Swipes left on a memory → [Delete] button appears
+  │    ├─ Taps Delete → confirmation dialog
+  │    └─ Memory removed (agent forgets this)
+  │
+  └─ Bottom stats show memory distribution
+```
+
+### 9.6 View Audit Trail
+
+```
+User opens Settings → "Audit Log"
+  │
+  ├─ Sees chronological list of all agent actions
+  │
+  ├─ Filters: Agent dropdown, Event type dropdown, Date range
+  │
+  ├─ Taps [Expand] on an entry → full JSON data shown
+  │
+  ├─ Taps [Export JSON] → downloads audit log as .json file
+  │
+  └─ Entries older than 30 days auto-pruned (configurable)
+```
