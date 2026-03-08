@@ -157,6 +157,25 @@ func (m *Manager) InterruptAgent(agentID string, env *protocol.Envelope) error {
 	return nil
 }
 
+// RetryAgent retries an agent that is in error state by resetting its state
+// to idle and restarting it.
+func (m *Manager) RetryAgent(agentID string) error {
+	m.mu.Lock()
+	ag, ok := m.agents[agentID]
+	m.mu.Unlock()
+
+	if !ok {
+		return fmt.Errorf("agent not found: %s", agentID)
+	}
+
+	if ag.GetState() != StateError {
+		return fmt.Errorf("agent is not in error state: %s", agentID)
+	}
+
+	ag.ResetState()
+	return nil
+}
+
 // BroadcastAgentList pushes a fresh TypeAgentList envelope to all clients.
 func (m *Manager) BroadcastAgentList() {
 	agents := m.ListAgents()

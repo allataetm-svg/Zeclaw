@@ -34,6 +34,8 @@ func (s *Server) handleMessage(client *Client, data []byte) {
 		s.handleGetHistory(client, &env)
 	case protocol.TypeUpdateSettings:
 		s.handleUpdateSettings(client, &env)
+	case protocol.TypeRetryAgent:
+		s.handleRetryAgent(client, &env)
 	default:
 		log.Printf("Unhandled message type: %s", env.Type)
 	}
@@ -100,6 +102,18 @@ func (s *Server) handleDeleteAgent(client *Client, env *protocol.Envelope) {
 	}
 	if err := s.agentMgr.DeleteAgent(env.AgentID); err != nil {
 		s.sendError(client, "delete_agent_error", err.Error())
+		return
+	}
+	s.agentMgr.BroadcastAgentList()
+}
+
+func (s *Server) handleRetryAgent(client *Client, env *protocol.Envelope) {
+	if env.AgentID == "" {
+		s.sendError(client, "missing_agent_id", "agent_id is required")
+		return
+	}
+	if err := s.agentMgr.RetryAgent(env.AgentID); err != nil {
+		s.sendError(client, "retry_agent_error", err.Error())
 		return
 	}
 	s.agentMgr.BroadcastAgentList()

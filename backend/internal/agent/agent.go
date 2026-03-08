@@ -22,13 +22,13 @@ import (
 type State string
 
 const (
-	StateCreated    State = "created"
-	StateIdle       State = "idle"
-	StateThinking   State = "thinking"
-	StateExecuting  State = "executing"
+	StateCreated     State = "created"
+	StateIdle        State = "idle"
+	StateThinking    State = "thinking"
+	StateExecuting   State = "executing"
 	StateInterrupted State = "interrupted"
-	StateError      State = "error"
-	StateDeleted    State = "deleted"
+	StateError       State = "error"
+	StateDeleted     State = "deleted"
 )
 
 // ---------------------------------------------------------------------------
@@ -146,6 +146,11 @@ func (a *Agent) GetState() State {
 // GetLastRunTime is a placeholder; returns current time.
 func (a *Agent) GetLastRunTime() time.Time {
 	return time.Now()
+}
+
+// ResetState resets the agent state to idle and clears any error condition.
+func (a *Agent) ResetState() {
+	a.setState(StateIdle)
 }
 
 // ---------------------------------------------------------------------------
