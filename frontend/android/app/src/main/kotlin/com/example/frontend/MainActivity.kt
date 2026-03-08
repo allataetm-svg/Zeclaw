@@ -1,6 +1,5 @@
 package com.example.frontend
 
-import android.content.Context
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -24,7 +23,6 @@ class MainActivity: FlutterActivity() {
                 "startBackend" -> {
                     try {
                         val msg = startBackend()
-                        // return null on success, or log message on failure
                         if (msg == null) result.success(true) else result.error("START_ERROR", msg, null)
                     } catch (e: Exception) {
                         result.error("START_ERROR", e.message, null)
@@ -68,9 +66,29 @@ class MainActivity: FlutterActivity() {
         }
 
         val binaryFile = File(backendDir, "zeclaw")
+        val prootFile = File(backendDir, "proot")
+
+        if (!prootFile.exists()) {
+            try {
+                val assetManager = context.assets
+                val assetFiles = assetManager.list("backend") ?: emptyArray()
+                
+                val prootAssetName = assetFiles.find { it == "proot" }
+                if (prootAssetName != null) {
+                    assetManager.open("backend/$prootAssetName").use { input ->
+                        prootFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    prootFile.setExecutable(true)
+                    prootFile.setReadable(true)
+                }
+            } catch (e: Exception) {
+                return "Failed to extract proot: ${e.message}"
+            }
+        }
 
         if (!binaryFile.exists()) {
-            // Extract binary from assets
             try {
                 val assetManager = context.assets
                 val assetFiles = assetManager.list("backend") ?: emptyArray()
@@ -90,81 +108,17 @@ class MainActivity: FlutterActivity() {
             }
         }
 
-        // Collect permission/debug info for the binary so we can diagnose execution issues
-        val permissionDebugBuilder = StringBuilder()
-        try {
-            // Ensure executable/readable for owner/group/other
-            try {
-                binaryFile.setExecutable(true, false)
-                binaryFile.setReadable(true, false)
-                permissionDebugBuilder.append("setExecutable/setReadable called\n")
-            } catch (e: Exception) {
-                permissionDebugBuilder.append("Failed to set file flags: ${e.message}\n")
-            }
-
-            // Explicit chmod 755 via Runtime.exec
-            try {
-                val chmodProc = Runtime.getRuntime().exec(arrayOf("chmod", "755", binaryFile.absolutePath))
-                val finished = chmodProc.waitFor(3, TimeUnit.SECONDS)
-                val stdout = chmodProc.inputStream.bufferedReader().use { it.readText() }
-                val stderr = chmodProc.errorStream.bufferedReader().use { it.readText() }
-                permissionDebugBuilder.append("chmod finished=${finished} exit=${if (finished) chmodProc.exitValue() else "timeout"}\n")
-                if (stdout.isNotBlank()) permissionDebugBuilder.append("chmod stdout:\n${stdout.takeLast(Math.min(stdout.length, 2000))}\n")
-                if (stderr.isNotBlank()) permissionDebugBuilder.append("chmod stderr:\n${stderr.takeLast(Math.min(stderr.length, 2000))}\n")
-            } catch (e: Exception) {
-                permissionDebugBuilder.append("chmod exec failed: ${e.message}\n")
-            }
-
-            // ls -l on the binary
-            try {
-                val lsProc = Runtime.getRuntime().exec(arrayOf("ls", "-l", binaryFile.absolutePath))
-                lsProc.waitFor(2, TimeUnit.SECONDS)
-                val lsOut = lsProc.inputStream.bufferedReader().use { it.readText().trim() }
-                permissionDebugBuilder.append("ls -l ${binaryFile.absolutePath}:\n${lsOut.takeLast(Math.min(lsOut.length, 2000))}\n")
-            } catch (e: Exception) {
-                permissionDebugBuilder.append("ls -l failed: ${e.message}\n")
-            }
-
-            // ls -Z on backendDir to show SELinux context (ignore if not available)
-            try {
-                val lsZ = Runtime.getRuntime().exec(arrayOf("ls", "-Z", backendDir.absolutePath))
-                lsZ.waitFor(2, TimeUnit.SECONDS)
-                val out = lsZ.inputStream.bufferedReader().use { it.readText().trim() }
-                permissionDebugBuilder.append("ls -Z ${backendDir.absolutePath}:\n${out.takeLast(Math.min(out.length, 2000))}\n")
-            } catch (e: Exception) {
-                permissionDebugBuilder.append("ls -Z not available or failed: ${e.message}\n")
-            }
-
-            // ls -Z on binary to show SELinux context
-            try {
-                val lsZ = Runtime.getRuntime().exec(arrayOf("ls", "-Z", binaryFile.absolutePath))
-                lsZ.waitFor(2, TimeUnit.SECONDS)
-                val out = lsZ.inputStream.bufferedReader().use { it.readText().trim() }
-                permissionDebugBuilder.append("ls -Z ${binaryFile.absolutePath}:\n${out.takeLast(Math.min(out.length, 2000))}\n")
-            } catch (e: Exception) {
-                permissionDebugBuilder.append("ls -Z binary failed: ${e.message}\n")
-            }
-
-            // /system/bin/id to show uid/gid
-            try {
-                val idProc = Runtime.getRuntime().exec(arrayOf("/system/bin/id"))
-                idProc.waitFor(2, TimeUnit.SECONDS)
-                val idOut = idProc.inputStream.bufferedReader().use { it.readText().trim() }
-                permissionDebugBuilder.append("/system/bin/id:\n${idOut}\n")
-            } catch (e: Exception) {
-                permissionDebugBuilder.append("id failed: ${e.message}\n")
-            }
-        } catch (_: Exception) {
-            // keep going; best-effort diagnostics
-        }
-
-        val permissionDebug = permissionDebugBuilder.toString()
-        if (permissionDebug.isNotEmpty()) {
-            backendOutput.append(permissionDebug)
-        }
-
         binaryFile.setExecutable(true)
         binaryFile.setReadable(true)
+        prootFile.setExecutable(true)
+        prootFile.setReadable(true)
+
+        try {
+            Runtime.getRuntime().exec(arrayOf("chmod", "755", prootFile.absolutePath)).waitFor(3, TimeUnit.SECONDS)
+            Runtime.getRuntime().exec(arrayOf("chmod", "755", binaryFile.absolutePath)).waitFor(3, TimeUnit.SECONDS)
+        } catch (e: Exception) {
+            backendOutput.append("chmod failed: ${e.message}\n")
+        }
 
         val candidates = listOf("127.0.0.1:8085", "0.0.0.0:8085", "127.0.0.1:8086")
         val logFile = File(backendDir, "zeclaw.log")
@@ -172,24 +126,35 @@ class MainActivity: FlutterActivity() {
 
         for (addr in candidates) {
             try {
-                // Start the backend with ProcessBuilder so we can capture output
                 val (host, portStr) = addr.split(":")
                 val port = portStr.toInt()
-                val pb = ProcessBuilder(binaryFile.absolutePath, "-addr", addr)
+
+                val pb = ProcessBuilder()
+                pb.command(
+                    prootFile.absolutePath,
+                    "-0",
+                    "-w", backendDir.absolutePath,
+                    "-b", "/proc",
+                    "-b", "/sys",
+                    "-b", "/dev",
+                    "-b", "/data/data/com.example.frontend/files:/data/data/com.example.frontend/files",
+                    binaryFile.absolutePath,
+                    "-addr", addr
+                )
                 pb.directory(backendDir)
+                pb.environment().put("PROOT_TMPDIR", backendDir.absolutePath)
                 pb.redirectErrorStream(true)
-                // write output to backendDir/zeclaw.log
                 pb.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile))
+
                 try {
                     val proc = pb.start()
                     backendProcess = proc
+                    backendOutput.append("Started proot with command: ${pb.command().joinToString(" ")}\n")
                 } catch (e: Exception) {
-                    // record and try next candidate
-                    backendOutput.append("Failed to exec binary for $addr: ${e.message}\n")
+                    backendOutput.append("Failed to start proot for $addr: ${e.message}\n")
                     continue
                 }
 
-                // poll for up to 8s
                 val start = System.currentTimeMillis()
                 val timeoutMs = 8000L
                 var started = false
@@ -201,21 +166,15 @@ class MainActivity: FlutterActivity() {
                     Thread.sleep(500)
                 }
 
-                // also capture a bit of log
                 if (logFile.exists()) {
                     val content = logFile.readText()
                     backendOutput.append(content.takeLast(Math.min(content.length, 8000)))
                 }
 
                 if (started) {
-                    return null // success
-                    } else {
-                    // stop process if still running
+                    return null
+                } else {
                     try { backendProcess?.destroyForcibly() } catch (_: Exception) {}
-                    // re-append permission debug collected earlier so getBackendLog() will include it
-                    try {
-                        if (permissionDebug.isNotEmpty()) backendOutput.append(permissionDebug)
-                    } catch (_: Exception) {}
                     backendOutput.append("Backend did not start listening on $addr\n")
                 }
             } catch (e: Exception) {
@@ -228,7 +187,6 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun isBackendRunning(host: String = "127.0.0.1", port: Int = 8085): Boolean {
-        // Check if something is listening on host:port
         try {
             Socket().use { socket ->
                 socket.connect(InetSocketAddress(host, port), 500)
@@ -241,6 +199,7 @@ class MainActivity: FlutterActivity() {
 
     private fun execShell(command: String, timeoutSeconds: Int): String {
         val executor = Executors.newSingleThreadExecutor()
+        val filesDir = applicationContext.filesDir
         try {
             val pb = ProcessBuilder("sh", "-c", command)
             pb.directory(filesDir)
@@ -272,7 +231,6 @@ class MainActivity: FlutterActivity() {
                 val content = logFile.readText()
                 if (content.isEmpty()) "(log empty)" else content
             } else {
-                // fallback to captured output
                 val out = backendOutput.toString()
                 if (out.isEmpty()) "(no log file)" else out
             }
