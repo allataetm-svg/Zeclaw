@@ -64,6 +64,7 @@ class MainActivity: FlutterActivity() {
         val assets = context.resources.assets
         val filesDir = context.filesDir
         val backendDir = File(filesDir, "backend")
+        val nativeLibDir = File(context.applicationInfo.nativeLibraryDir)
 
         if (!backendDir.exists()) {
             backendDir.mkdirs()
@@ -78,7 +79,7 @@ class MainActivity: FlutterActivity() {
             else -> "zeclaw-backend-arm64"
         }
 
-        val binaryFile = File(backendDir, "zeclaw")
+        val binaryFile = File(nativeLibDir, "libzeclaw.so")
 
         try {
             assets.open("flutter_assets/assets/backend/$binaryName").use { input ->
@@ -133,6 +134,16 @@ class MainActivity: FlutterActivity() {
                 permissionDebugBuilder.append("ls -Z ${backendDir.absolutePath}:\n${out.takeLast(Math.min(out.length, 2000))}\n")
             } catch (e: Exception) {
                 permissionDebugBuilder.append("ls -Z not available or failed: ${e.message}\n")
+            }
+
+            // ls -Z on nativeLibDir to show SELinux context of binary location
+            try {
+                val lsZ = Runtime.getRuntime().exec(arrayOf("ls", "-Z", nativeLibDir.absolutePath))
+                lsZ.waitFor(2, TimeUnit.SECONDS)
+                val out = lsZ.inputStream.bufferedReader().use { it.readText().trim() }
+                permissionDebugBuilder.append("ls -Z ${nativeLibDir.absolutePath}:\n${out.takeLast(Math.min(out.length, 2000))}\n")
+            } catch (e: Exception) {
+                permissionDebugBuilder.append("ls -Z nativeLibDir failed: ${e.message}\n")
             }
 
             // /system/bin/id to show uid/gid
