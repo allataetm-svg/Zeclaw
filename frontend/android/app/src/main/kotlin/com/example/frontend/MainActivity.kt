@@ -1,7 +1,6 @@
 package com.example.frontend
 
 import android.content.Context
-import android.content.res.AssetManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -61,7 +60,6 @@ class MainActivity: FlutterActivity() {
 
     private fun startBackend(): String? {
         val context = applicationContext
-        val assets = context.resources.assets
         val filesDir = context.filesDir
         val backendDir = File(filesDir, "backend")
         val nativeLibDir = File(context.applicationInfo.nativeLibraryDir)
@@ -70,28 +68,9 @@ class MainActivity: FlutterActivity() {
             backendDir.mkdirs()
         }
 
-        val abi = android.os.Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"
-        val binaryName = when {
-            abi.contains("arm64") -> "zeclaw-backend-arm64"
-            abi.contains("armeabi") -> "zeclaw-backend-arm"
-            abi.contains("x86_64") -> "zeclaw-backend-x86_64"
-            abi.contains("x86") -> "zeclaw-backend-x86"
-            else -> "zeclaw-backend-arm64"
-        }
-
         val binaryFile = File(nativeLibDir, "libzeclaw.so")
 
-        try {
-            assets.open("flutter_assets/assets/backend/$binaryName").use { input ->
-                binaryFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-        } catch (e: Exception) {
-            return "Failed to extract backend: ${e.message}"
-        }
-
-        // Collect permission/debug info for the copied binary so we can diagnose execution issues
+        // Collect permission/debug info for the binary so we can diagnose execution issues
         val permissionDebugBuilder = StringBuilder()
         try {
             // Ensure executable/readable for owner/group/other
