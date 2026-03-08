@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/models/models.dart';
 import '../../core/providers/providers.dart';
 import '../../app/theme.dart';
@@ -102,6 +103,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 },
               ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.terminal, color: ZeclawColors.accentPrimary),
+            onPressed: () => context.go('/terminal'),
+            tooltip: 'Terminal',
+          ),
           IconButton(
             icon: const Icon(Icons.add, color: ZeclawColors.accentPrimary),
             onPressed: () => _showCreateAgentDialog(context),

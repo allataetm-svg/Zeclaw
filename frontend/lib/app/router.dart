@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../features/chat/chat_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/terminal/terminal_screen.dart';
 
 final router = GoRouter(
   initialLocation: '/chat',
@@ -13,6 +14,7 @@ final router = GoRouter(
         GoRoute(path: '/chat', builder: (ctx, state) => const ChatScreen()),
         GoRoute(path: '/dashboard', builder: (ctx, state) => const DashboardScreen()),
         GoRoute(path: '/settings', builder: (ctx, state) => const SettingsScreen()),
+        GoRoute(path: '/terminal', builder: (ctx, state) => const TerminalScreen()),
       ],
     ),
   ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/providers.dart';
 import '../../core/websocket/websocket_client.dart';
+import '../../core/services/backend_service.dart';
 import '../../app/theme.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -17,6 +18,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _modelCtrl = TextEditingController(text: 'gpt-4o');
   bool _showApiKey = false;
   bool _isSaving = false;
+  bool _isStartingBackend = false;
 
   @override
   void dispose() {
@@ -46,6 +48,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
+  Future<void> _startBackend() async {
+    setState(() => _isStartingBackend = true);
+    try {
+      await BackendService.startBackend();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Backend started'),
+            backgroundColor: ZeclawColors.accentSuccess,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start backend: $e'),
+            backgroundColor: ZeclawColors.accentError,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isStartingBackend = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final connectionState = ref.watch(connectionStateProvider);
@@ -62,7 +90,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 6),
           TextField(
             controller: _endpointUrlCtrl,
-            decoration: const InputDecoration(hintText: 'https://api.openai.com/v1'),
+            decoration:
+                const InputDecoration(hintText: 'https://api.openai.com/v1'),
           ),
           const SizedBox(height: 12),
           const _FieldLabel('API Key'),
@@ -73,7 +102,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             decoration: InputDecoration(
               hintText: 'sk-...',
               suffixIcon: IconButton(
-                icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility, size: 18),
+                icon: Icon(
+                    _showApiKey ? Icons.visibility_off : Icons.visibility,
+                    size: 18),
                 color: ZeclawColors.textMuted,
                 onPressed: () => setState(() => _showApiKey = !_showApiKey),
               ),
@@ -93,13 +124,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               backgroundColor: ZeclawColors.accentPrimary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: _isSaving
                 ? const SizedBox(
                     height: 18,
                     width: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
                   )
                 : const Text('Save Settings'),
           ),
@@ -125,7 +158,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  connectionState == WsConnectionState.connected ? 'Connected' : 'Disconnected',
+                  connectionState == WsConnectionState.connected
+                      ? 'Connected'
+                      : 'Disconnected',
                   style: TextStyle(
                     color: connectionState == WsConnectionState.connected
                         ? ZeclawColors.accentSuccess
@@ -138,7 +173,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const _SettingsRow(
             label: 'Port',
-            trailing: Text('8085', style: TextStyle(color: ZeclawColors.textSecondary, fontSize: 13)),
+            trailing: Text('8085',
+                style:
+                    TextStyle(color: ZeclawColors.textSecondary, fontSize: 13)),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isStartingBackend ? null : _startBackend,
+              icon: _isStartingBackend
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.play_arrow, size: 20),
+              label: Text(_isStartingBackend ? 'Starting...' : 'Start Backend'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ZeclawColors.accentPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           const Divider(color: ZeclawColors.borderSubtle),
@@ -147,7 +207,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 12),
           const _SettingsRow(
             label: 'Version',
-            trailing: Text('0.1.0', style: TextStyle(color: ZeclawColors.textSecondary, fontSize: 13)),
+            trailing: Text('0.1.0',
+                style:
+                    TextStyle(color: ZeclawColors.textSecondary, fontSize: 13)),
           ),
         ],
       ),
@@ -179,7 +241,9 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: const TextStyle(color: ZeclawColors.textSecondary, fontSize: 13));
+    return Text(text,
+        style:
+            const TextStyle(color: ZeclawColors.textSecondary, fontSize: 13));
   }
 }
 
@@ -194,7 +258,9 @@ class _SettingsRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: ZeclawColors.textPrimary, fontSize: 14)),
+          Text(label,
+              style: const TextStyle(
+                  color: ZeclawColors.textPrimary, fontSize: 14)),
           const Spacer(),
           trailing,
         ],

@@ -5,15 +5,25 @@ import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/models.dart';
 
+// On Android emulators the host machine's localhost is reachable at
+// 10.0.2.2, so we attempt a few candidate addresses in order until one
+// connects successfully. This keeps the app working on emulator and
+// when running on a host where localhost is correct.
+const List<String> _candidateWsUrls = [
+  'ws://localhost:8085/ws',
+  'ws://127.0.0.1:8085/ws',
+  'ws://10.0.2.2:8085/ws',
+];
+
 enum WsConnectionState { disconnected, connecting, connected }
 
 typedef MessageHandler = void Function(WsEnvelope envelope);
 
 class WebSocketClient extends ChangeNotifier {
-  static const _wsUrl = 'ws://localhost:8085/ws';
   static const _maxReconnectDelay = Duration(seconds: 30);
 
   WebSocketChannel? _channel;
+  String? _connectedUrl;
   WsConnectionState _connectionState = WsConnectionState.disconnected;
   Duration _reconnectDelay = const Duration(seconds: 1);
   Timer? _reconnectTimer;
@@ -24,6 +34,7 @@ class WebSocketClient extends ChangeNotifier {
 
   WsConnectionState get connectionState => _connectionState;
   bool get isConnected => _connectionState == WsConnectionState.connected;
+  String? get connectedUrl => _connectedUrl;
 
   void addHandler(MessageHandler handler) {
     _handlers.add(handler);
@@ -38,23 +49,42 @@ class WebSocketClient extends ChangeNotifier {
     _doConnect();
   }
 
-  void _doConnect() {
+  void _doConnect() async {
     if (_disposed) return;
     _setConnectionState(WsConnectionState.connecting);
-    try {
-      _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
-      _channel!.stream.listen(
-        _onMessage,
-        onError: _onError,
-        onDone: _onDone,
-        cancelOnError: false,
-      );
-      _setConnectionState(WsConnectionState.connected);
-      _reconnectDelay = const Duration(seconds: 1);
-    } catch (e) {
-      debugPrint('WebSocket connect error: $e');
-      _scheduleReconnect();
+
+    for (final url in _candidateWsUrls) {
+      if (_disposed) return;
+      try {
+        debugPrint('Attempting WebSocket connect to $url');
+        final channel = WebSocketChannel.connect(Uri.parse(url));
+        // Try listening briefly to detect immediate failures. We attach
+        // the real listeners only after this succeeds.
+        channel.stream.listen((_) {}, onError: (_) {}, cancelOnError: true).cancel();
+
+        // success
+        _channel = channel;
+        _connectedUrl = url;
+        _channel!.stream.listen(
+          _onMessage,
+          onError: _onError,
+          onDone: _onDone,
+          cancelOnError: false,
+        );
+        _setConnectionState(WsConnectionState.connected);
+        _reconnectDelay = const Duration(seconds: 1);
+        debugPrint('WebSocket connected to $url');
+        return;
+      } catch (e) {
+        debugPrint('WebSocket connect to $url failed: $e');
+        // try next candidate
+      }
     }
+
+    // If we reach here, all candidates failed.
+    debugPrint('WebSocket connect error: all candidate URLs failed');
+    _setConnectionState(WsConnectionState.disconnected);
+    _scheduleReconnect();
   }
 
   void _onMessage(dynamic raw) {
@@ -76,6 +106,7 @@ class WebSocketClient extends ChangeNotifier {
   }
 
   void _onDone() {
+    debugPrint('WebSocket done');
     _setConnectionState(WsConnectionState.disconnected);
     _scheduleReconnect();
   }
