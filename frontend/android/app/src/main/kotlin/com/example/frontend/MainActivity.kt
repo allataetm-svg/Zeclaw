@@ -129,6 +129,9 @@ class MainActivity: FlutterActivity() {
                 val (host, portStr) = addr.split(":")
                 val port = portStr.toInt()
 
+                backendOutput.append("prootFile: ${prootFile.absolutePath}, exists: ${prootFile.exists()}\n")
+                backendOutput.append("binaryFile: ${binaryFile.absolutePath}, exists: ${binaryFile.exists()}\n")
+
                 val pb = ProcessBuilder()
                 pb.command(
                     prootFile.absolutePath,
